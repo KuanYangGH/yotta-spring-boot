@@ -2,9 +2,9 @@ package com.xjtu.spider.spiders.zhihu;
 
 
 import com.xjtu.common.Config;
+import com.xjtu.spider.service.SpiderService;
 import com.xjtu.spider.spiders.webmagic.bean.Assembles;
 import com.xjtu.spider.spiders.webmagic.pipeline.SqlPipeline;
-import com.xjtu.spider.spiders.webmagic.service.SQLService;
 import com.xjtu.spider.spiders.webmagic.spider.YangKuanSpider;
 import org.springframework.beans.factory.annotation.Autowired;
 import us.codecraft.webmagic.Page;
@@ -17,10 +17,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 知乎碎片爬虫
+ * @author yangkuan
+ */
 public class ZhihuProcessor implements PageProcessor {
 
-    @Autowired
-    SQLService sqlService;
+
+    SpiderService spiderService;
+
+    public ZhihuProcessor(SpiderService spiderService) {
+        this.spiderService = spiderService;
+    }
 
     private Site site = Site.me()
             .setRetryTimes(Config.retryTimes)
@@ -62,7 +70,10 @@ public class ZhihuProcessor implements PageProcessor {
     }
     public void zhihuAnswerCrawl(String domainName){
         //1.获取分面信息
-        List<Map<String, Object>> facets = sqlService.getFacets(domainName);
+        List<Map<String, Object>> facets = spiderService.getFacets(domainName);
+        if(facets==null||facets.size()==0){
+            return;
+        }
         //2.添加连接请求
         List<Request> requests = new ArrayList<>();
         for(Map<String, Object> facet : facets){
@@ -76,10 +87,10 @@ public class ZhihuProcessor implements PageProcessor {
             requests.add(request.setUrl(url).setExtras(facet));
         }
         //3.创建ZhihuProcessor
-        YangKuanSpider.create(new ZhihuProcessor())
+        YangKuanSpider.create(new ZhihuProcessor(this.spiderService))
                 .addRequests(requests)
                 .thread(Config.THREAD)
-                .addPipeline(new SqlPipeline())
+                .addPipeline(new SqlPipeline(this.spiderService))
                 .addPipeline(new ConsolePipeline())
                 .runAsync();
     }

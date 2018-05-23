@@ -1,17 +1,13 @@
 package com.xjtu.spider.spiders.baiduzhidao;
 
 import com.xjtu.common.Config;
-import com.xjtu.domain.domain.Domain;
-import com.xjtu.domain.repository.DomainRepository;
-import com.xjtu.facet.repository.FacetRepository;
+import com.xjtu.spider.service.SpiderService;
 import com.xjtu.spider.spiders.webmagic.bean.Assembles;
-import com.xjtu.spider.spiders.webmagic.bean.FragmentContent;
 import com.xjtu.spider.spiders.webmagic.pipeline.SqlPipeline;
-import com.xjtu.spider.spiders.webmagic.service.SQLService;
 import com.xjtu.spider.spiders.webmagic.spider.YangKuanSpider;
-import com.xjtu.topic.domain.Topic;
-import com.xjtu.topic.repository.TopicRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RestController;
 import us.codecraft.webmagic.Page;
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
@@ -22,11 +18,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 百度知道碎片爬虫
+ * @author yangkuan
+ */
+
 public class BaiduZhidaoProcessor implements PageProcessor {
 
-    @Autowired
-    SQLService sqlService;
+    public BaiduZhidaoProcessor(SpiderService spiderService) {
+        this.spiderService = spiderService;
+    }
 
+    SpiderService spiderService;
 
     private Site site = Site.me()
             .setRetryTimes(Config.retryTimes)
@@ -60,7 +63,13 @@ public class BaiduZhidaoProcessor implements PageProcessor {
     }
     public void baiduAnswerCrawl(String domainName){
         //1.获取分面信息
-        List<Map<String, Object>> facets = sqlService.getFacets(domainName);
+        if(spiderService==null){
+            System.out.println("YYYYYYYYYYYYYYYYYYYYYYYYYY");
+        }
+        List<Map<String, Object>> facets = spiderService.getFacets(domainName);
+        if(facets==null||facets.size()==0){
+            return;
+        }
         //2.添加连接请求
         List<Request> requests = new ArrayList<>();
         for(Map<String, Object> facet : facets){
@@ -73,10 +82,10 @@ public class BaiduZhidaoProcessor implements PageProcessor {
             facet.put("sourceName", "百度知道");
             requests.add(request.setUrl(url).setExtras(facet));
         }
-        YangKuanSpider.create(new BaiduZhidaoProcessor())
+        YangKuanSpider.create(new BaiduZhidaoProcessor(this.spiderService))
                 .addRequests(requests)
                 .thread(Config.THREAD)
-                .addPipeline(new SqlPipeline())
+                .addPipeline(new SqlPipeline(this.spiderService))
                 .addPipeline(new ConsolePipeline())
                 .runAsync();
     }

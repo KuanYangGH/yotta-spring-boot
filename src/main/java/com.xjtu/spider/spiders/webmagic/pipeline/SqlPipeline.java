@@ -1,9 +1,8 @@
 package com.xjtu.spider.spiders.webmagic.pipeline;
 
 import com.xjtu.assemble.domain.Assemble;
-import com.xjtu.assemble.repository.AssembleRepository;
+import com.xjtu.spider.service.SpiderService;
 import com.xjtu.spider.spiders.webmagic.bean.Assembles;
-import com.xjtu.spider.spiders.webmagic.service.SQLService;
 import org.springframework.beans.factory.annotation.Autowired;
 import us.codecraft.webmagic.ResultItems;
 import us.codecraft.webmagic.Task;
@@ -21,8 +20,12 @@ import java.util.Map;
  * @date 2018/05/17 22:42
  */
 public class SqlPipeline implements Pipeline {
-    @Autowired
-    SQLService sqlService;
+
+    SpiderService spiderService;
+
+    public SqlPipeline(SpiderService spiderService) {
+        this.spiderService = spiderService;
+    }
 
     @Override
     public void process(ResultItems resultItems, Task task) {
@@ -36,7 +39,7 @@ public class SqlPipeline implements Pipeline {
                 //构建碎片
                 // 分面信息
                 Map<String,Object> facetMap = resultItems.getRequest().getExtras();
-                facetMap = sqlService.getFacet(facetMap);
+                facetMap = spiderService.getFacet(facetMap);
                 //时间
                 //设置日期格式
                 SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -50,7 +53,7 @@ public class SqlPipeline implements Pipeline {
                 //存碎片
                 assembleList.add(assemble);
             }
-        sqlService.saveAssembles(assembleList);
+            spiderService.saveAssembles(assembleList);
         }
     }
 }
