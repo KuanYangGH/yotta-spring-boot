@@ -387,6 +387,7 @@ public class FacetService {
      * @return
      */
     public Result findFacetsByDomainNameAndTopicNames(String domainName,String topicNames){
+
         List<String> topicNameList = Arrays.asList(topicNames.split(","));
         //查询主题
         List<Topic> topics = topicRepository.findByDomainName(domainName);
@@ -620,6 +621,19 @@ public class FacetService {
     }
 
     /**
+     * 根据课程名，查询分面
+     *
+     * @param domainName
+     * @return
+     */
+    public Result findByDomainName(String domainName) {
+        List<Facet> facets = facetRepository.findByDomainName(domainName);
+        logger.info("分面查询成功");
+        return ResultUtil.success(ResultEnum.SUCCESS.getCode(),
+                ResultEnum.SUCCESS.getMsg(), facets);
+    }
+
+    /**
      * 指定课程名、主题名和二级分面名，查询所有三级分面数量
      * @param domainName 课程名
      * @param topicName 主题名
@@ -697,6 +711,86 @@ public class FacetService {
         Pageable pageable = new PageRequest(page, size, direction, "sourceId");
         Page<Facet> facetPage = facetRepository.findAll(pageable);
         return facetPageJudge(facetPage);
+    }
+
+    /**
+     * 查询分面分布
+     *
+     * @param domainName
+     * @return
+     */
+    public Result findFacetDistribution(String domainName) {
+        Domain domain = domainRepository.findByDomainName(domainName);
+        if (domain == null) {
+            logger.error("分面查询失败：对应课程不存在");
+            return ResultUtil.error(ResultEnum.FACET_SEARCH_ERROR_3.getCode(), ResultEnum.FACET_SEARCH_ERROR_3.getMsg());
+        }
+        List<Topic> topics = topicRepository.findByDomainId(domain.getDomainId());
+        List<Integer> firstLayerFacetNumbers = new ArrayList<>();
+        for (Topic topic : topics) {
+            firstLayerFacetNumbers.add(facetRepository.countByTopicIdAndFacetLayer(topic.getTopicId(), 1));
+        }
+        Map<Integer, Integer> firstLayerFacetNumberMap = new LinkedHashMap<>();
+        //查找主题下的最大分分面数量
+        Integer maxNumber = 0;
+        for (Integer firstLayerFacetNumber : firstLayerFacetNumbers) {
+            if (maxNumber < firstLayerFacetNumber) {
+                maxNumber = firstLayerFacetNumber;
+            }
+        }
+        for (int i = 0; i <= maxNumber; i++) {
+            firstLayerFacetNumberMap.put(i, 0);
+        }
+        for (Integer firstLayerFacetNumber : firstLayerFacetNumbers) {
+            firstLayerFacetNumberMap.put(firstLayerFacetNumber, firstLayerFacetNumberMap.get(firstLayerFacetNumber) + 1);
+        }
+        //查找所有一级分面下的二级分面数
+        List<Facet> allFirstLayerFacets = facetRepository.findFacetsByDomainIdAndFacetLayer(domain.getDomainId(), 1);
+        List<Integer> secondLayerFacetNumbers = new ArrayList<>();
+        for (Facet facet : allFirstLayerFacets) {
+            secondLayerFacetNumbers.add(facetRepository.countByTopicIdAndFacetLayer(facet.getFacetId(), 2));
+        }
+        //查找最大二级分面数
+        Integer maxSecondLayerFacetNumber = 0;
+        for (Integer secondLayerFacetNumber : secondLayerFacetNumbers) {
+            if (maxSecondLayerFacetNumber < secondLayerFacetNumber) {
+                maxSecondLayerFacetNumber = secondLayerFacetNumber;
+            }
+        }
+        Map<Integer, Integer> secondLayerFacetNumberMap = new LinkedHashMap<>();
+        for (int i = 0; i <= maxSecondLayerFacetNumber; i++) {
+            secondLayerFacetNumberMap.put(i, 0);
+        }
+        for (Integer secondLayerFacetNumber : secondLayerFacetNumbers) {
+            secondLayerFacetNumberMap.put(secondLayerFacetNumber, secondLayerFacetNumberMap.get(secondLayerFacetNumber) + 1);
+        }
+        /*List<Long> allFirstLayerFacetIds = new ArrayList<>();
+        for(Facet facet:allFirstLayerFacets){
+            allFirstLayerFacetIds.add(facet.getFacetId());
+        }
+        List<Long> secondLayerFacetNumbers = facetRepository
+                .countAllFacetsByParentFacetIdAndFacetLayer(allFirstLayerFacetIds,2);
+        logger.info(secondLayerFacetNumbers.toString());
+        //查找最大二级分面数
+        Long maxSecondLayerFacetNumber = new Long(0);
+        for(Long secondLayerFacetNumber:secondLayerFacetNumbers){
+            if(maxSecondLayerFacetNumber<secondLayerFacetNumber){
+                maxSecondLayerFacetNumber = secondLayerFacetNumber;
+            }
+        }
+        Map<Long,Long> secondLayerFacetNumberMap = new LinkedHashMap<>();
+        for(Long i=new Long(0);i<=maxNumber;i++){
+            secondLayerFacetNumberMap.put(i,new Long(0));
+        }
+        for(Long secondLayerFacetNumber:secondLayerFacetNumbers){
+            secondLayerFacetNumberMap.put(secondLayerFacetNumber,secondLayerFacetNumberMap.get(secondLayerFacetNumber)+1);
+        }*/
+        Map<String, Object> result = new HashMap<>();
+        result.put("firstLayerFacet", firstLayerFacetNumberMap);
+        result.put("secondLayerFacet", secondLayerFacetNumberMap);
+        logger.info("分面统计成功");
+        return ResultUtil.success(ResultEnum.SUCCESS.getCode(), ResultEnum.SUCCESS.getMsg()
+                , result);
     }
 
     /**
