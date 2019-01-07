@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +29,16 @@ public interface FacetRepository extends JpaRepository<Facet, Long>, JpaSpecific
     @Transactional(rollbackFor = Exception.class)
     void deleteByTopicId(Long topicId);
 
+
+    /**
+     * 删除分面
+     *
+     * @param facetId
+     * @param facetLayer
+     */
+    @Modifying(clearAutomatically = true)
+    @Transactional(rollbackFor = Exception.class)
+    void deleteByFacetIdAndFacetLayer(Long facetId, Integer facetLayer);
 
     /**
      * 指定主题Id，查找分面
@@ -69,6 +80,18 @@ public interface FacetRepository extends JpaRepository<Facet, Long>, JpaSpecific
      */
     @Transactional(rollbackFor = Exception.class)
     List<Facet> findByParentFacetId(Long parentFacetId);
+
+
+    /**
+     * 根据父分面id，查询子分面id
+     *
+     * @param parentFacetIds
+     * @return
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Query(value = "select f.facet_id from facet f where f.parent_facet_id in ?1", nativeQuery = true)
+    List<BigInteger> findFacetIdsByParentFacetIds(List<Long> parentFacetIds);
+
 
     /**
      * 指定父分面Id以及分面所在层，查找分面
@@ -115,6 +138,15 @@ public interface FacetRepository extends JpaRepository<Facet, Long>, JpaSpecific
      */
     @Transactional(rollbackFor = Exception.class)
     Facet findByTopicIdAndFacetNameAndFacetLayer(Long topicId, String facetName, Integer facetLayer);
+
+
+    /**
+     * @param topicId
+     * @param facetName
+     * @param parentFacetId
+     * @return
+     */
+    Facet findByTopicIdAndFacetNameAndParentFacetId(Long topicId, String facetName, Long parentFacetId);
 
 
     /**
@@ -225,8 +257,65 @@ public interface FacetRepository extends JpaRepository<Facet, Long>, JpaSpecific
             "WHERE \n" +
             "t.domain_id = ?1 AND \n" +
             "t.topic_id = f .topic_id AND \n" +
-            "f.facet_layer = ?2 ", nativeQuery = true)
-    Integer findFacetNumberByDomainIdAndFacetLayer(Long domainId, Integer facetLayer);
+            "f.facet_layer IN ?2 GROUP BY f.facet_layer", nativeQuery = true)
+    List<BigInteger> findFacetNumberByDomainIdAndFacetLayer(Long domainId, List<Integer> facetLayer);
+
+
+    /**
+     * 查询课程下的各层分面数，连表查询
+     *
+     * @param domainId
+     * @param facetLayer
+     * @return
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Query(value = "SELECT t.domain_id,COUNT(f.facet_id)\n" +
+            "FROM topic t, facet f\n" +
+            "WHERE t.domain_id IN ?1 AND \n" +
+            "t.topic_id = f.topic_id AND \n" +
+            "f.facet_layer=?2 \n" +
+            "GROUP BY t.domain_id", nativeQuery = true)
+    List<Object[]> countFacetsGroupByDomainIdAndFacetLayer(List<Long> domainId, Integer facetLayer);
+
+
+    /**
+     * 查询课程下的各层分面数，连表查询
+     *
+     * @param domainIds
+     * @return
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Query(value = "SELECT t.domain_id,COUNT(f.facet_id)\n" +
+            "FROM topic t, facet f\n" +
+            "WHERE t.domain_id IN ?1 AND \n" +
+            "t.topic_id = f.topic_id \n" +
+            "GROUP BY t.domain_id", nativeQuery = true)
+    List<Object[]> countFacetsGroupByDomainId(List<Long> domainIds);
+
+    /**
+     * 统计分面数
+     *
+     * @param domainId
+     * @return
+     */
+    @Query(value = "SELECT COUNT(f.facet_id)\n" +
+            "FROM facet AS f,topic AS t \n" +
+            "WHERE t.domain_id=?1 and t.topic_id=f.topic_id; ", nativeQuery = true)
+    @Transactional(rollbackFor = Exception.class)
+    Integer countByDomainId(Long domainId);
+
+
+    /**
+     * 统计某一级分面数
+     *
+     * @param domainId
+     * @return
+     */
+    @Query(value = "SELECT COUNT(f.facet_id)\n" +
+            "FROM facet AS f,topic AS t \n" +
+            "WHERE t.domain_id=?1 and t.topic_id=f.topic_id and f.facet_layer=?2", nativeQuery = true)
+    @Transactional(rollbackFor = Exception.class)
+    Integer countByDomainIdAndFacetLayer(Long domainId, Integer facetLayer);
 
 
     /**

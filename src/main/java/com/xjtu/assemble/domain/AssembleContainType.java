@@ -16,15 +16,6 @@ public class AssembleContainType extends Assemble {
 
     public AssembleContainType() {
     }
-
-    public AssembleContainType(String assembleContent, String assembleText, String assembleScratchTime
-            , Long facetId, Long sourceId, String type, String flag, String url) {
-        super(assembleContent, assembleText, assembleScratchTime, facetId, sourceId);
-        this.type = type;
-        this.flag = flag;
-        this.url = url;
-    }
-
     @Override
     public String toString() {
         return "AssembleContainType{" +
@@ -40,10 +31,12 @@ public class AssembleContainType extends Assemble {
                 '}';
     }
 
+    @Override
     public String getType() {
         return type;
     }
 
+    @Override
     public void setType(String type) {
         this.type = type;
     }

@@ -4,8 +4,6 @@ import com.xjtu.common.domain.Result;
 import com.xjtu.common.domain.ResultEnum;
 import com.xjtu.domain.service.DomainService;
 import io.swagger.annotations.ApiOperation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +22,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(value = "/domain")
 public class DomainController {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     @Autowired
     private DomainService domainService;
 
@@ -58,6 +55,38 @@ public class DomainController {
         }
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
+
+
+    @GetMapping("/getDomainById")
+    @ApiOperation(value = "根据课程id，获得课程信息", notes = "根据课程id，获得课程信息")
+    public ResponseEntity getDomainById(@RequestParam(name = "domainId") Long domainId) {
+        Result result = domainService.findDomainById(domainId);
+        if (!result.getCode().equals(ResultEnum.SUCCESS.getCode())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+    @GetMapping("/getDomainByName")
+    @ApiOperation(value = "根据课程名，获得课程信息", notes = "根据课程名，获得课程信息")
+    public ResponseEntity getDomainByName(@RequestParam(name = "domainName") String domainName) {
+        Result result = domainService.findDomainByName(domainName);
+        if (!result.getCode().equals(ResultEnum.SUCCESS.getCode())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+    @GetMapping("/getDomainStatisticalChartByDomainName")
+    @ApiOperation(value = "统计课程数据（包括主题、主题依赖关系、分面、碎片）", notes = "统计课程数据（包括主题、主题依赖关系、分面、碎片）")
+    public ResponseEntity getDomainStatisticalChartByDomainName(@RequestParam(name = "domainName") String domainName) {
+        Result result = domainService.findDomainStatisticalChartByDomainName(domainName);
+        if (!result.getCode().equals(ResultEnum.SUCCESS.getCode())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
 
     /**
      * 读取domain，得到所有领域名和各领域下主题、分面、碎片、关系的数量
